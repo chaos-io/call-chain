@@ -1,5 +1,5 @@
 // //go:build trace
-package main
+package trace
 
 import (
 	"bytes"
