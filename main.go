@@ -1,6 +1,5 @@
 package main
 
-//go:github.com/chaos-io/go-trace
 func A1() {
 	defer trace()()
 	B1()

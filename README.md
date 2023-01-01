@@ -1,1 +1,3 @@
 # go-trace
+
+./exec.sh
