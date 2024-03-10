@@ -1,54 +1,47 @@
-// //go:build trace
-package trace
+package go_trace
 
 import (
-	"bytes"
-	"fmt"
-	"runtime"
-	"strconv"
-	"sync"
+	"log"
+
+	"github.com/opentracing/opentracing-go"
+	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
+	jaegerlog "github.com/uber/jaeger-client-go/log"
+	"github.com/uber/jaeger-lib/metrics"
 )
 
-var mu sync.Mutex
-var m = make(map[uint64]int)
-
-func getGID() uint64 {
-	b := make([]byte, 64)
-	b = b[:runtime.Stack(b, false)]
-	b = bytes.TrimPrefix(b, []byte("goroutine "))
-	b = b[:bytes.IndexByte(b, ' ')]
-	n, _ := strconv.ParseUint(string(b), 10, 64)
-	return n
-}
-
-func printTrace(id uint64, name, typ string, indent int) {
-	indents := ""
-	for i := 0; i < indent; i++ {
-		indents += "\t"
-	}
-	fmt.Printf("g[%02d]:%s%s%s\n", id, indents, typ, name)
-}
-
-func Trace() func() {
-	pc, _, _, ok := runtime.Caller(1)
-	if !ok {
-		panic("not found caller")
+func Trace() {
+	// Sample configuration for testing. Use constant sampling to sample every trace
+	// and enable LogSpan to log every span via configured Logger.
+	cfg := jaegercfg.Configuration{
+		ServiceName: "your_service_name",
+		Sampler: &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		},
+		Reporter: &jaegercfg.ReporterConfig{
+			LogSpans: true,
+		},
 	}
 
-	id := getGID()
-	fn := runtime.FuncForPC(pc)
-	name := fn.Name()
+	// Example logger and metrics factory. Use github.com/uber/jaeger-client-go/log
+	// and github.com/uber/jaeger-lib/metrics respectively to bind to real logging and metrics
+	// frameworks.
+	jLogger := jaegerlog.StdLogger
+	jMetricsFactory := metrics.NullFactory
 
-	mu.Lock()
-	v := m[id]
-	m[id] = v + 1
-	mu.Unlock()
-	printTrace(id, name, "->", v+1)
-	return func() {
-		//mu.Lock()
-		//v := m[id]
-		//m[id] = v - 1
-		//mu.Unlock()
-		//printTrace(id, name, "<-", v)
+	// Initialize tracer with a logger and a metrics factory
+	tracer, closer, err := cfg.NewTracer(
+		jaegercfg.Logger(jLogger),
+		jaegercfg.Metrics(jMetricsFactory),
+	)
+	if err != nil {
+		log.Panicf("new trace error=%v", err)
 	}
+
+	// Set the singleton opentracing.Tracer with the Jaeger tracer.
+	opentracing.SetGlobalTracer(tracer)
+	defer closer.Close()
+
+	// continue main()
 }
