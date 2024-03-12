@@ -18,10 +18,12 @@ func main() {
 	defer closer.Close()
 	opentracing.SetGlobalTracer(tracer)
 
-	helloTo := "example3"
+	helloTo := "example4"
+	greeting := "greeting4"
 
 	span := tracer.StartSpan("say-hello")
 	span.SetTag("hello-to", helloTo)
+	span.SetBaggageItem("greeting", greeting)
 	defer span.Finish()
 
 	ctx := opentracing.ContextWithSpan(context.Background(), span)

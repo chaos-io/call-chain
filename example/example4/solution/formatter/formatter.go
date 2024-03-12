@@ -12,7 +12,6 @@ import (
 	"github.com/chaos-io/go-trace/example/lib/tracing"
 )
 
-
 func main() {
 	tracer, closer := tracing.Init("formatter")
 	defer closer.Close()
